@@ -1,0 +1,30 @@
+{
+  "name": "servehome-backend",
+  "version": "1.0.0",
+  "description": "FixIt Home Services REST API with Express & MongoDB Mongoose",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/scripts/seed.js",
+    "test": "node --test test/api.test.js"
+  },
+  "keywords": [
+    "home-services",
+    "fixit",
+    "marketplace",
+    "express",
+    "mongodb",
+    "mongoose"
+  ],
+  "author": "FixIt Team",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.4.0"
+  }
+}
