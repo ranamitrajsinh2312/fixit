@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import '../data.dart';
 import '../services/api_service.dart';
+import 'booking_screen.dart';
 
 class BookingsScreen extends StatefulWidget {
   final String city;
@@ -19,6 +20,7 @@ class BookingsScreen extends StatefulWidget {
 
 class _BookingsScreenState extends State<BookingsScreen> {
   String selectedFilter = 'All';
+  final Set<String> _reviewedBookingIds = {'FX-87341'};
 
   @override
   void initState() {
@@ -267,6 +269,197 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
+  void _handleRebook(BookingItem booking) {
+    Category? matchedCategory;
+    Service? matchedService;
+
+    for (final cat in categories) {
+      if (cat.name.toLowerCase() == booking.categoryName.toLowerCase() ||
+          cat.id.toLowerCase() == booking.categoryName.toLowerCase()) {
+        matchedCategory = cat;
+        for (final s in cat.services) {
+          if (s.name.toLowerCase() == booking.serviceName.toLowerCase()) {
+            matchedService = s;
+            break;
+          }
+        }
+        break;
+      }
+    }
+
+    matchedCategory ??= categories.first;
+    matchedService ??= Service(
+      id: 'srv_rebook_${booking.serviceName.toLowerCase().replaceAll(' ', '_')}',
+      name: booking.serviceName,
+      desc: 'Doorstep service with 30-day warranty',
+      price: booking.price,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BookingScreen(
+          category: matchedCategory!,
+          service: matchedService!,
+          city: booking.city.isNotEmpty ? booking.city : widget.city,
+        ),
+      ),
+    );
+  }
+
+  void _showRatingModal(BuildContext context, BookingItem booking) {
+    int rating = 5;
+    final commentController = TextEditingController();
+    final selectedTags = <String>{};
+    final tags = ['⚡ Fast Arrival', '🔧 Flawless Repair', '😊 Polite Pro', '🧼 Cleaned Up Area', '💯 Honest Pricing'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Rate Your Experience', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'How was your ${booking.serviceName} service on ${booking.dateTime}?',
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 16),
+
+              // Interactive Stars
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(5, (idx) {
+                    final starIndex = idx + 1;
+                    return IconButton(
+                      iconSize: 38,
+                      splashRadius: 24,
+                      icon: Icon(
+                        starIndex <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: Colors.amber,
+                      ),
+                      onPressed: () => setSheetState(() => rating = starIndex),
+                    );
+                  }),
+                ),
+              ),
+              Center(
+                child: Text(
+                  rating == 5
+                      ? 'Excellent! (5/5)'
+                      : rating == 4
+                          ? 'Very Good (4/5)'
+                          : rating == 3
+                              ? 'Average (3/5)'
+                              : 'Needs Improvement',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Quick Tag Chips
+              const Text('What went well?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: tags.map((t) {
+                  final isSelected = selectedTags.contains(t);
+                  return FilterChip(
+                    label: Text(t, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : AppTheme.textDark)),
+                    selected: isSelected,
+                    selectedColor: AppTheme.primaryBlue,
+                    checkmarkColor: Colors.white,
+                    onSelected: (val) {
+                      setSheetState(() {
+                        if (val) {
+                          selectedTags.add(t);
+                        } else {
+                          selectedTags.remove(t);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 14),
+
+              // Comment TextField
+              TextField(
+                controller: commentController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  hintText: 'Share a few words about the technician & service...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final fullComment = [
+                      if (selectedTags.isNotEmpty) selectedTags.join(', '),
+                      if (commentController.text.trim().isNotEmpty) commentController.text.trim(),
+                    ].join('. ');
+
+                    await ApiService.instance.submitReview(
+                      bookingId: booking.id,
+                      rating: rating,
+                      comment: fullComment.isNotEmpty ? fullComment : 'Great job by technician!',
+                      serviceName: booking.serviceName,
+                    );
+
+                    setState(() {
+                      _reviewedBookingIds.add(booking.id);
+                    });
+
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('🎉 Thank you! Your $rating★ review for ${booking.serviceName} has been submitted.'),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  child: const Text('Submit Review'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -511,6 +704,66 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                           ),
                                           onPressed: () => _showCancelDialog(context, b),
                                           child: const Text('Cancel Booking', style: TextStyle(fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  if (b.status.toLowerCase().contains('completed')) ...[
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        if (_reviewedBookingIds.contains(b.id))
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Reviewed ★',
+                                                  style: TextStyle(
+                                                    color: Colors.green,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        else
+                                          OutlinedButton.icon(
+                                            onPressed: () => _showRatingModal(context, b),
+                                            icon: const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                            label: const Text(
+                                              'Rate & Review',
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                            ),
+                                            style: OutlinedButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                              minimumSize: Size.zero,
+                                              side: const BorderSide(color: Colors.amber),
+                                              foregroundColor: const Color(0xFFB45309),
+                                            ),
+                                          ),
+                                        FilledButton.icon(
+                                          onPressed: () => _handleRebook(b),
+                                          icon: const Icon(Icons.repeat_rounded, size: 14),
+                                          label: const Text(
+                                            'Rebook',
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                          ),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: AppTheme.primaryBlue,
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                            minimumSize: Size.zero,
+                                          ),
                                         ),
                                       ],
                                     ),

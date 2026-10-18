@@ -8,6 +8,7 @@ import 'select_city_screen.dart';
 import 'admin_panel_screen.dart';
 import 'servicer_screen.dart';
 import 'login_screen.dart';
+import '../core/localization/app_strings.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String city;
@@ -171,6 +172,126 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Understood'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showLanguageModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => ListenableBuilder(
+        listenable: AppStrings.instance,
+        builder: (ctx, _) {
+          final current = AppStrings.instance.currentLanguage;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Select Language / ભાષા પસંદ કરો',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _buildLanguageOption(
+                  ctx,
+                  title: 'English (Default)',
+                  subtitle: 'International English',
+                  flag: '🇬🇧',
+                  isSelected: current == AppLanguage.en,
+                  onTap: () {
+                    AppStrings.instance.setLanguage(AppLanguage.en);
+                    Navigator.pop(ctx);
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 8),
+                _buildLanguageOption(
+                  ctx,
+                  title: 'ગુજરાતી (Gujarati)',
+                  subtitle: 'ગુજરાતમાં ઘરગથ્થુ સેવાઓ',
+                  flag: '🇮🇳',
+                  isSelected: current == AppLanguage.gu,
+                  onTap: () {
+                    AppStrings.instance.setLanguage(AppLanguage.gu);
+                    Navigator.pop(ctx);
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 8),
+                _buildLanguageOption(
+                  ctx,
+                  title: 'हिंदी (Hindi)',
+                  subtitle: 'घर की मरम्मत और सेवाएं',
+                  flag: '🇮🇳',
+                  isSelected: current == AppLanguage.hi,
+                  onTap: () {
+                    AppStrings.instance.setLanguage(AppLanguage.hi);
+                    Navigator.pop(ctx);
+                    setState(() {});
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLanguageOption(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required String flag,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryBlue.withValues(alpha: 0.08) : AppTheme.surfaceBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? AppTheme.primaryBlue : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(flag, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isSelected ? AppTheme.primaryBlue : AppTheme.textDark)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle_rounded, color: AppTheme.primaryBlue, size: 20),
+          ],
+        ),
       ),
     );
   }
@@ -516,6 +637,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Customer Care',
                       'Need assistance with your booking?\n\nWhatsApp: +91 98795 00000\nEmail: care@fixitapp.in\nHours: 8:00 AM - 9:00 PM Daily',
                     ),
+                  ),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  _buildMenuItem(
+                    icon: Icons.language_rounded,
+                    title: 'App Language / ભાષા / भाषा',
+                    subtitle: AppStrings.instance.languageName,
+                    onTap: () => _showLanguageModal(context),
                   ),
                   const Divider(height: 1, color: Color(0xFFF1F5F9)),
                   _buildMenuItem(

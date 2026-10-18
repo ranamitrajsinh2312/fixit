@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 const int platformFee = 25; // Rs per service
 
-const List<String> cities = [
+final List<String> cities = [
   'Rajkot',
   'Ahmedabad',
   'Gandhinagar',

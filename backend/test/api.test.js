@@ -405,5 +405,81 @@ describe('Phase 4: Booking & Provider Assignment', () => {
       assert.strictEqual(data.data.paymentStatus, 'paid');
     }
   });
+
+  // Phase 6: Ratings, Admin & Polish
+  test('GET /api/admin/analytics returns comprehensive marketplace metrics', async () => {
+    const res = await fetch(`${baseUrl}/api/admin/analytics`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.ok(data.data.totalBookings !== undefined);
+    assert.ok(data.data.totalGrossRevenue !== undefined);
+    assert.ok(data.data.totalPlatformEarnings !== undefined);
+    assert.ok(data.data.averageRating !== undefined);
+  });
+
+  test('POST /api/reviews and GET /api/reviews records and lists customer feedback', async () => {
+    const postRes = await fetch(`${baseUrl}/api/reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId: 'FX-91204',
+        rating: 5,
+        comment: 'Fantastic work by Ramesh! Fixed the fan regulator quickly.',
+        userName: 'Aarav Shah',
+        serviceName: 'Fan repair',
+      }),
+    });
+    assert.strictEqual(postRes.status, 201);
+    const postData = await postRes.json();
+    assert.strictEqual(postData.success, true);
+    assert.strictEqual(postData.data.rating, 5);
+
+    const getRes = await fetch(`${baseUrl}/api/reviews?bookingId=FX-91204`);
+    assert.strictEqual(getRes.status, 200);
+    const getData = await getRes.json();
+    assert.strictEqual(getData.success, true);
+    assert.ok(Array.isArray(getData.data));
+  });
+
+  test('POST /api/admin/cities adds new operational city', async () => {
+    const res = await fetch(`${baseUrl}/api/admin/cities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Surat', state: 'Gujarat' }),
+    });
+    assert.strictEqual(res.status, 201);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(data.data.name, 'Surat');
+  });
+
+  test('PATCH /api/admin/services/:id/price updates service catalog pricing', async () => {
+    const res = await fetch(`${baseUrl}/api/admin/services/fan_repair/price`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ price: 249 }),
+    });
+    assert.ok([200, 404].includes(res.status));
+    const data = await res.json();
+    if (res.status === 200) {
+      assert.strictEqual(data.success, true);
+      assert.strictEqual(data.data.price, 249);
+    }
+  });
+
+  test('POST /api/admin/providers/:id/approve-kyc approves partner KYC', async () => {
+    const res = await fetch(`${baseUrl}/api/admin/providers/prov_demo_1/approve-kyc`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approve: true }),
+    });
+    assert.ok([200, 404].includes(res.status));
+    const data = await res.json();
+    if (res.status === 200) {
+      assert.strictEqual(data.success, true);
+      assert.strictEqual(data.data.kycStatus, 'verified');
+    }
+  });
 });
 
